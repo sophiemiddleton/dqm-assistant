@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from dqm_assistant.context import EXPECTED_RUN_TYPES, RunContext
+from dqm_assistant.detectors.base import NotJudged
 from dqm_assistant.findings import (BAD, CLASSES, EXPECTED, GOOD, METHOD_ARTEFACT, NEW, PERSISTENT,
                                  REFERENCE_ARTEFACT, UNSURE, Finding, Group, MethodCard, RunReport)
 
@@ -35,6 +36,8 @@ def gather(detectors: Sequence, ctx: RunContext) -> Tuple[List[Finding], List[st
             findings += got
             if not got or any(f.flag != UNSURE for f in got):   # [] = ran, saw nothing
                 checked.append(d.method_id)
+        except NotJudged as exc:                      # ran, but had nothing to judge
+            not_checked.append(f"{d.method_id}: not judged ({exc})")
         except Exception as exc:                      # one broken method must not sink the run
             LOG.exception("detector %s failed", d.method_id)
             not_checked.append(f"{d.method_id}: failed ({type(exc).__name__}: {exc})")
@@ -135,7 +138,18 @@ def classify(g: Group, ctx: RunContext, history, cards: Dict[str, MethodCard]) -
 
 
 # ---------------------------------------------------------------- verdict
-def verdict(groups: Sequence[Group], not_checked: Sequence[str], checked: Sequence[str]) -> str:
+def unjudged(configured: Sequence[str], checked: Sequence[str]) -> List[str]:
+    """Configured methods that did not judge the run: failed, no reference, no data, all UNSURE."""
+    return [m for m in configured if m not in set(checked)]
+
+
+def verdict(groups: Sequence[Group], not_checked: Sequence[str], checked: Sequence[str],
+            configured: Sequence[str] = ()) -> str:
+    """GOOD only when every configured method judged the run and nothing real was found.
+
+    A real finding makes the run BAD whatever else failed. Without one, any configured method
+    that did not judge the run makes it NEEDS-EXPERT: a GOOD from the methods that happened to
+    run would hide that the others never looked."""
     if not checked:
         return "NEEDS-EXPERT"                         # nothing judged the run: never call it GOOD
     real = [g for g in groups if g.cls in (NEW, PERSISTENT)]
@@ -143,8 +157,8 @@ def verdict(groups: Sequence[Group], not_checked: Sequence[str], checked: Sequen
         return "NEEDS-EXPERT"
     if real:
         return "BAD" if any(g.confidence != "low" for g in real) else "NEEDS-EXPERT"
-    if not_checked and not groups:
-        return "NEEDS-EXPERT" if any("no approved reference" in n for n in not_checked) else "GOOD"
+    if unjudged(configured, checked):
+        return "NEEDS-EXPERT"
     return "GOOD"
 
 
@@ -205,10 +219,15 @@ def llm_pass(llm, groups: List[Group], ctx: RunContext, cards: Dict[str, MethodC
     return merged, out.get("summary", ""), out.get("next_step", "")
 
 
-def template_summary(groups: Sequence[Group], v: str, ctx: RunContext) -> Tuple[str, str]:
+def template_summary(groups: Sequence[Group], v: str, ctx: RunContext,
+                     checked: Sequence[str] = (), missing: Sequence[str] = ()) -> Tuple[str, str]:
     if not groups:
-        if v != "GOOD":
+        if not checked:
             return f"Run {ctx.run}: no method could judge this run.", "Fix the inputs listed under not_checked."
+        if missing:
+            return (f"Run {ctx.run}: {', '.join(checked)} flagged nothing, but {', '.join(missing)} "
+                    f"did not judge the run, so it is not called GOOD.",
+                    "Fix what not_checked lists for those methods, then reassess (refresh=True).")
         return f"Run {ctx.run}: no method flagged anything.", "None."
     lines = [f"Run {ctx.run} ({ctx.run_type}): {len(groups)} issue group(s), verdict {v}."]
     for g in groups:
@@ -236,12 +255,17 @@ def assess(ctx: RunContext, detectors: Sequence, history, llm=None) -> Tuple[Run
         except Exception as exc:
             LOG.warning("LLM pass failed, using rules only: %s", exc)
             not_checked.append(f"LLM summary failed ({type(exc).__name__})")
-    v = verdict(groups, not_checked, checked)
+    missing = unjudged(list(cards), checked)
+    v = verdict(groups, not_checked, checked, list(cards))
     if not summary:
-        summary, next_step = template_summary(groups, v, ctx)
+        summary, next_step = template_summary(groups, v, ctx, checked, missing)
+    if missing and groups:                                      # say it whoever wrote the summary
+        summary += (f"\nNot judged by {', '.join(missing)} (see not_checked): "
+                    "this run was not fully assessed.")
     report = RunReport(run=ctx.run, subsystem=ctx.subsystem, verdict=v, summary=summary,
                        groups=groups, context=ctx.summary(), not_checked=not_checked,
                        next_step=next_step, methods=sorted(cards),
+                       methods_judged=sorted(checked), methods_not_judged=sorted(missing),
                        created=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                        llm_model=model)
     return report, findings

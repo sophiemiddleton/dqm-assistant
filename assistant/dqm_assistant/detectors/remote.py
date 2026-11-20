@@ -28,7 +28,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from dqm_assistant.context import RunContext
-from dqm_assistant.detectors.base import Detector, register
+from dqm_assistant.detectors.base import Detector, NotJudged, register
 from dqm_assistant.findings import BAD, GOOD, UNSURE, Finding, MethodCard
 
 SCHEMA = "dqm-method-scores/1"
@@ -205,4 +205,6 @@ class RemoteDetector(Detector):
         if doc["run"] != ctx.run or doc["sid"] != ctx.sid:
             raise SchemaError(f"asked for sid {ctx.sid} run {ctx.run}, "
                               f"got sid {doc['sid']} run {doc['run']}")
+        if not doc["n_scored"]:
+            raise NotJudged(doc.get("error") or f"no data for run {ctx.run} (n_scored = 0)")
         return to_findings(doc, ctx.subsystem, self.card.name)

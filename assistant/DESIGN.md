@@ -94,7 +94,9 @@ code, so the output is reproducible and auditable.
    is reported, not hidden. Optionally pull ECL entries for the run window and
    known-issue notes (kb) for the subsystem.
 6. **Report (LLM).** One structured answer:
-   - overall verdict GOOD / BAD / NEEDS-EXPERT, with confidence
+   - overall verdict GOOD / BAD / NEEDS-EXPERT, with confidence. GOOD requires every
+     configured method to have judged the run; a method that failed, had no reference or had
+     no data makes an otherwise clean run NEEDS-EXPERT (a real BAD stays BAD)
    - list of issue groups: description, locus, onset run, class, which methods
      flagged it, evidence links
    - what was *not* checked (missing histograms, method not calibrated,

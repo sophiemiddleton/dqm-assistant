@@ -15,6 +15,12 @@ from dqm_assistant.findings import Finding, MethodCard
 REGISTRY: Dict[str, Type["Detector"]] = {}
 
 
+class NotJudged(Exception):
+    """Raised by a detector that ran but could not judge the run (for example no data for it).
+    Unlike returning [] -- "judged, nothing flagged" -- the method counts as not checked, so the
+    run cannot be called GOOD on the strength of it."""
+
+
 def register(name: str) -> Callable[[Type["Detector"]], Type["Detector"]]:
     def deco(cls: Type["Detector"]) -> Type["Detector"]:
         cls.name = name

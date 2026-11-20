@@ -268,3 +268,46 @@ def test_remote_detector_file_and_command_transports(tmp_path):
     wrong = build({"type": "remote", "method": "m", "path": str(tmp_path / "118" / "200.json")})
     with pytest.raises(Exception, match="run 201"):
         wrong.assess(ctx(run=201))                                   # document for another run
+
+
+class _Boom(Fake):
+    def assess(self, ctx):
+        raise RuntimeError("no module named hist")
+
+
+def test_failed_method_means_needs_expert_not_good():
+    """The case that bit in practice: KS failed, TranAD passed -> was GOOD, must not be."""
+    rep, _ = assessor.assess(ctx(), [_Boom("ks", {}), Fake("tranad", {"A": GOOD}, needs_ref=False)],
+                             history=[])
+    assert rep.verdict == "NEEDS-EXPERT"
+    assert "ks did not judge the run" in rep.summary and "refresh=True" in rep.next_step
+    assert (rep.methods_judged, rep.methods_not_judged) == (["tranad"], ["ks"])
+    rep, _ = assessor.assess(ctx(), [Fake("ks", {"A": GOOD}), Fake("tranad", {"A": GOOD}, needs_ref=False)],
+                             history=[])
+    assert rep.verdict == "GOOD"                                  # everyone judged, nothing found
+
+
+def test_failed_method_does_not_hide_a_real_problem():
+    dets = [_Boom("ks", {}), Fake("tranad", {"A": BAD}, needs_ref=False, calibrated=True)]
+    rep, _ = assessor.assess(ctx(), dets, history=[])
+    assert rep.verdict == "BAD" and "Not judged by ks" in rep.summary
+
+
+def test_remote_method_with_no_data_is_not_judged(tmp_path):
+    import json
+    from dqm_assistant.detectors import build
+    (tmp_path / "200.json").write_text(json.dumps(_scores(run=200, n_scored=0)))
+    remote = build({"type": "remote", "method": "m", "path": str(tmp_path / "{run}.json")})
+    rep, _ = assessor.assess(ctx(), [Fake("ks", {"A": GOOD}), remote], history=[])
+    assert rep.verdict == "NEEDS-EXPERT"
+    assert any(n.startswith("m: not judged (no data") for n in rep.not_checked)
+
+
+def test_llm_summary_failure_is_not_a_method_failure():
+    class BadLLM:
+        model = "x"
+        def json(self, *a, **k):
+            raise RuntimeError("gateway down")
+    dets = [Fake("ks", {"A": BAD}), Fake("tranad", {"A": GOOD}, needs_ref=False)]   # method_artefact
+    rep, _ = assessor.assess(ctx(), dets, history=[], llm=BadLLM())
+    assert rep.verdict == "GOOD" and any("LLM summary failed" in n for n in rep.not_checked)

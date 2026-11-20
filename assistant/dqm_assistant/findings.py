@@ -97,9 +97,11 @@ class RunReport:
     context: Dict[str, Any]
     not_checked: List[str]
     next_step: str
-    methods: List[str]
+    methods: List[str]                 # configured
     created: str
     llm_model: Optional[str] = None
+    methods_judged: List[str] = field(default_factory=list)       # actually judged this run
+    methods_not_judged: List[str] = field(default_factory=list)   # failed / no reference / no data
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)

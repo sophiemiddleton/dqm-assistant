@@ -21,6 +21,16 @@ configuration), `ecl` (shift logbook), `kb` (DocDB).
 4. Context the report does not have: `ecl` entries in the run's time window; `runs.get_run`
    if the run type looks wrong.
 
+## How to read the verdict
+
+- `GOOD`: every configured method judged the run and nothing real was found.
+- `BAD`: at least one real (`new` / `persistent`) issue with medium or high confidence.
+- `NEEDS-EXPERT`: the run could not be cleared. Say which reason applies: a suspect reference,
+  only low-confidence issues, or **a method that did not judge the run** (failed, no
+  reference, no data). In that last case, name the method and quote its `not_checked` line.
+  Never describe the run as fine. List methods from `methods_judged` and
+  `methods_not_judged`, not from `methods` (that is only what is configured).
+
 ## How to read the classes
 
 - `reference_artefact`: say the *reference* is suspect, not the run; suggest
