@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dqm-method-scores/1",
+  "title": "DQM method scores, version 1",
+  "description": "One anomaly method's verdict on one run of one DQM source. See SCHEMA.md.",
+  "type": "object",
+  "required": ["schema", "method", "method_version", "sid", "run", "granularity", "n_scored", "items", "results"],
+  "properties": {
+    "schema": {"const": "dqm-method-scores/1"},
+    "method": {"type": "string", "minLength": 1},
+    "method_version": {"type": "string"},
+    "sid": {"type": "integer"},
+    "run": {"type": "integer"},
+    "granularity": {"enum": ["subrun", "run"]},
+    "n_scored": {"type": "integer", "minimum": 0},
+    "items": {"type": "array", "items": {"type": "string"}},
+    "reference": {"type": ["string", "null"]},
+    "direction": {"enum": ["higher_is_worse", "lower_is_worse"], "default": "higher_is_worse"},
+    "params": {"type": "object"},
+    "error": {"type": ["string", "null"]},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "flag"],
+        "properties": {
+          "item": {"type": "string"},
+          "flag": {"enum": ["GOOD", "BAD", "UNSURE"]},
+          "subrun": {"type": ["integer", "null"]},
+          "score": {"type": ["number", "null"]},
+          "threshold": {"type": ["number", "null"]},
+          "locus": {"type": ["string", "null"]},
+          "top": {
+            "type": "array",
+            "items": {"type": "object", "required": ["metric"], "properties": {"metric": {"type": "string"}}}
+          },
+          "evidence": {"type": "object"}
+        }
+      }
+    }
+  }
+}

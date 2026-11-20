@@ -1,0 +1,21 @@
+# Reference registry (PLAN_hists_refs.md, Q2). Only `approved` entries are used.
+# Git history of this file is the audit trail.
+
+- id: crv-cosmics-006-001
+  version: 1
+  source_version: "006-001"
+  run_type: cosmics
+  valid_runs: [124182, 125699]
+  runs: [124336]
+  status: retired
+  note: "dead half-blocks: even channels 1664-1791, odd channels 1920-2047"
+
+- id: crv-cosmics-006-001
+  version: 2
+  source_version: "006-001"
+  run_type: cosmics
+  valid_runs: [124182, 125699]
+  runs: [124228]
+  status: candidate            # -> approved once a CRV expert signs off
+  checks: {dead_channels: pass}
+  note: "chosen by histcompare study 2026-11-15; PE shoulder moves after ~125700, needs its own"
