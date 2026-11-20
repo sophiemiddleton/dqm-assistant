@@ -29,14 +29,15 @@ references.yaml    the registry (124228 is a *candidate* until a CRV expert appr
 ## Run
 
 ```bash
-source $DQM_ASSISTANT_ENV                      # see "Requirements" in ../README.md
-export PYTHONPATH=$PWD:$PYTHONPATH
-cp config.example.yaml config.yaml             # adjust paths
+../install.sh --tranad                         # once: the venv in ../.venv (see ../README.md)
+cp config.example.yaml /exp/mu2e/data/users/$USER/dqm-assistant/config.yaml   # adjust paths
+PY=../.venv/bin/python
+CFG=/exp/mu2e/data/users/$USER/dqm-assistant/config.yaml
 
-python -m pytest -q tests                      # offline: fake detectors, no network
-python -m dqm_assistant --config config.yaml --no-llm replay 124189 124537 125846
-python -m dqm_assistant.server --config config.yaml                    # stdio, for Genesis
-python -m dqm_assistant.server --config config.yaml --http --port 8010 # HTTP, next to the other servers
+$PY -m pytest -q tests                                             # offline: fake detectors
+$PY -m dqm_assistant --config $CFG --no-llm replay 124189 124537 125846
+./start-stdio.sh                                                   # stdio, for hep-genesis
+$PY -m dqm_assistant.server --config $CFG --http --port 8010       # HTTP, next to the other servers
 ```
 
 ### In hep-genesis (Mu2e aitools harness)
@@ -51,7 +52,8 @@ Add server in the web UI):
  "command": "/abs/path/dqm-assistant/assistant/start-stdio.sh"}
 ```
 
-`start-stdio.sh` sources `$DQM_ASSISTANT_ENV` with its output on stderr, and reads
+`start-stdio.sh` runs the server in the venv from `install.sh` (`$DQM_ASSISTANT_VENV`, default
+`../.venv`), and reads
 `/exp/mu2e/data/users/$USER/dqm-assistant/config.yaml` (or `$DQM_ASSISTANT_CONFIG`). The skill
 (`skills/mu2e-dqm.md`, frontmatter dropped) is sent as the server's MCP instructions, so no
 harness-side context file is needed. Replay recent runs first (`... replay <runs>`), or every

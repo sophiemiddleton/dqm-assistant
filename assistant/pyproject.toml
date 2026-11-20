@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dqm-assistant"
+version = "0.1.0"
+description = "Mu2e DQM run assessor (method-agnostic) behind MCP"
+requires-python = ">=3.10"
+# mu2e-dqm (github.com/Mu2e/DQM, subdirectory python) is not on PyPI: ../install.sh installs it
+# from git in the same resolve, so only the name is given here.
+dependencies = [
+    "mcp>=2.0.0",
+    "mu2e-dqm[hist,evaluate]",   # hist: dqm.hist (KS, uproot); evaluate: dqm.evaluate
+    "pyyaml",
+    "numpy",
+    "uproot",
+]
+
+[project.optional-dependencies]
+llm = ["openai"]        # the L2 report-text pass (llm.py) and the vision detector
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["dqm_assistant", "dqm_assistant.detectors"]

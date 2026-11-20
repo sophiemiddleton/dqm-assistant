@@ -7,13 +7,12 @@ item per run, BAD if any subrun is flagged, carrying the worst subrun).
 
 Two ways to run the scorer:
 
-    # in-process: needs the anldq/torch env ($DQM_ASSISTANT_ENV) for dqm-assistant itself
+    # in-process: needs install.sh --tranad (torch, dqm_pipeline, anldq) in dqm-assistant's venv
     - {type: tranad, model: /path/crv_tranad_006-001.pkl, detectors: [tranad, drift]}
 
     # separate env: dqm-assistant needs no torch; the CLI reloads the model on every run
     - type: tranad
-      command: [bash, -c, "source /path/setup_ana_env.sh >/dev/null 2>&1 &&
-                python -m tranad_score --model /path/m.pkl --sid {sid} {run}"]
+      command: [/path/other-venv/bin/tranad-score, --model, /path/m.pkl, --sid, "{sid}", "{run}"]
 
 Use `dqm_alarms` (algo crv_ml) instead once crv_ml commits its alarms through the DQM driver.
 tranad-score is found on PYTHONPATH, or else as the sibling directory ../tranad-score.

@@ -5,12 +5,12 @@ Given a trained dqm_pipeline model and a DQM source id, it reads one run's point
 DQM database, runs dqm_pipeline's `crv_ml` evaluator on them (the same code as the DQM
 driver), and returns plain JSON. It writes nothing and knows nothing about dqm-assistant.
 
-Concept code: it only *imports* dqm_pipeline (`MLEvaluator`, public API) and changes nothing in
-that repo, so this directory can be deleted or moved out on its own.
+It only *imports* dqm_pipeline (`MLEvaluator`, public API, from github.com/sophiemiddleton/Mu2e-TranADDQM)
+and changes nothing in that repo.
 
 ```bash
-source $DQM_ASSISTANT_ENV                 # anldq/torch, DQM/python, dqm_pipeline (see ../README.md)
-python -m tranad_score --model crv_tranad_006-001.pkl --sid 118 125846 122834
+../install.sh --tranad                    # dqm_pipeline, anldq, torch, mu2e-dqm into ../.venv
+../.venv/bin/tranad-score --model crv_tranad_006-001.pkl --sid 118 125846 122834
 ```
 
 ```python

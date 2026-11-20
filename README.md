@@ -12,24 +12,41 @@ returns one report.
 | [`tranad-score/`](tranad-score/README.md) | A standalone "score this run" service for the TranAD anomaly model. The assistant uses it as a detector. |
 | [`method-scores/`](method-scores/SCHEMA.md) | The output contract (`dqm-method-scores/1`) for any method that runs outside the assistant. |
 
-## Requirements
+## Install
 
-- **The Python environment of CrossExperimentalAIDQM.** Its `envs/setup_ana_env.sh` sets up the
-  Mu2e ana env, anldq/torch (for TranAD), Mu2e/DQM's `dqm` package and `dqm_pipeline`. Point
-  `DQM_ASSISTANT_ENV` at it (default:
-  `/exp/mu2e/app/users/$USER/CrossExperimentalAIDQM/envs/setup_ana_env.sh`). Without TranAD,
-  any env with `mcp>=2`, `pyyaml` and `mu2e-dqm` runs the server and the KS and alarm detectors.
+Everything comes from git; no local checkout of other code is needed.
+
+```bash
+git clone git@github.com:sophiemiddleton/dqm-assistant.git && cd dqm-assistant
+./install.sh --tranad          # venv in .venv; without --tranad: no torch, KS and alarms only
+.venv/bin/python -m pytest -q assistant/tests
+```
+
+`install.sh` (uv, Python 3.12) installs:
+
+| Package | From | Why |
+|---|---|---|
+| this repo's `assistant/` and `tranad-score/` | editable | the server and the TranAD scorer |
+| `mu2e-dqm[hist,evaluate]` | [Mu2e/DQM](https://github.com/Mu2e/DQM) @ v2.1.3 | DQM database reader, histogram KS, evaluator API |
+| `dqm_pipeline` | [Mu2e-TranADDQM](https://github.com/sophiemiddleton/Mu2e-TranADDQM) @ 1da23d3 | TranAD evaluation (`--tranad`) |
+| `anldq` | AIDQM @ a138e911 (private, ssh) | the TranAD model that dqm_pipeline loads (`--tranad`) |
+| `mcp`, `torch` (CPU), ... | PyPI | |
+
+Each git source is a pinned default that can be overridden with an environment variable
+(`DQM_SPEC`, `DQM_PIPELINE_SPEC`, `ANLDQ_SPEC`), set to another ref or to a path to a local
+clone. anldq is installed without its own (very large) dependency list, and with a no-op
+`spt3g` stand-in, because its package imports the SPT-3G loader at load time. See the header
+of `install.sh`.
+
+Also needed:
 - **A harness**: hep-genesis from [Mu2e/aitools](https://github.com/Mu2e/aitools)
   (`harness/hep-genesis`). Setup and the `servers.json` entry are in
   [assistant/README.md](assistant/README.md#in-hep-genesis-mu2e-aitools-harness).
-- **Per-user data** (config, trained models, cache, store) outside the repo, by default
-  `/exp/mu2e/data/users/$USER/dqm-assistant/`. Start from
-  [assistant/config.example.yaml](assistant/config.example.yaml).
-
-```bash
-source $DQM_ASSISTANT_ENV
-cd assistant && PYTHONPATH=$PWD:$PYTHONPATH python -m pytest -q tests     # offline, 22 tests
-```
+- **Per-user data** outside the repo: config, trained TranAD model (a dqm_pipeline bundle),
+  histogram cache and store, by default in `/exp/mu2e/data/users/$USER/dqm-assistant/`.
+  Start from [assistant/config.example.yaml](assistant/config.example.yaml).
+- **Access** to the Mu2e DQM database (Query Engine) and, for KS, the DQM histogram files
+  on /pnfs.
 
 ## Layers
 

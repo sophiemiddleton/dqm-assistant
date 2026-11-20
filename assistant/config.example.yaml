@@ -11,7 +11,7 @@ subsystems:
     source_version: "006-001"
     dataset_dir: /pnfs/mu2e/persistent/datasets/phy-ntd/dqm/mu2e/cosmics_crv/crvreco-006-001-file
     default_run_type: cosmics # until the runs MCP is wired in
-    # periods: /abs/CrossExperimentalAIDQM/dqm_pipeline/configs/periods_006-001.csv   # period,start_run,end_run
+    # periods: /abs/periods_006-001.csv     # e.g. from Mu2e-TranADDQM configs/   # period,start_run,end_run
     items:                    # histogram paths inside the DQM files
       - crvRecoDQM/PEr
       - crvRecoDQM/logchi2
@@ -22,12 +22,12 @@ subsystems:
     mean: []                  # items averaged over subruns instead of summed
     detectors:                # the method-agnostic part: any list of plugins
       - {type: ks}
-      # TranAD: run the crv_ml model directly (needs the torch env, $DQM_ASSISTANT_ENV), or read its alarms
+      # TranAD: run the crv_ml model directly (needs install.sh --tranad), or read its alarms
       # once crv_ml commits them. Train with: python -m dqm_pipeline --csv <matrix> --save-model <pkl>
       - {type: tranad, model: /path/to/crv_tranad_006-001.pkl, detectors: [tranad, drift]}
-      # ...or the same scorer in its own env, so this env needs no torch (~20 s/run: reloads model):
+      # ...or the scorer from another venv, so this one needs no torch (~20 s/run: reloads model):
       # - type: tranad
-      #   command: [bash, -c, "source /abs/setup_ana_env.sh >/dev/null 2>&1 && cd /abs/dqm-assistant/tranad-score && python -m tranad_score --model /abs/m.pkl --sid {sid} {run}"]
+      #   command: [/abs/other-venv/bin/tranad-score, --model, /abs/m.pkl, --sid, "{sid}", "{run}"]
       # Any other method emitting dqm-method-scores/1 (../method-scores/SCHEMA.md):
       # - {type: remote, method: my_method, url: http://localhost:8020/score,
       #    card: {compares: "...", granularity: metric, needs_reference: false}}
