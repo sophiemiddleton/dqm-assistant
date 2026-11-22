@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tranad-score"
 version = "0.1.0"
-description = "Score one run's DQM points with a trained dqm_pipeline (TranAD) model; emits dqm-method-scores/1"
+description = "Score one run's DQM points with a trained mu2e_tranad (TranAD) model; emits dqm-method-scores/1"
 requires-python = ">=3.10"
-# dqm_pipeline (TranAD pipeline) and mu2e-dqm come from git, and anldq (the TranAD model,
-# which dqm_pipeline imports) is installed without its dependency list: see ../install.sh.
+# mu2e_tranad (TranAD pipeline, including the TranAD model) and mu2e-dqm come from git:
+# see ../install.sh.
 dependencies = [
-    "dqm_pipeline",
+    "mu2e-tranad",
     "mu2e-dqm",
     "torch>=2.0",
 ]

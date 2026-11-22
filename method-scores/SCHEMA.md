@@ -71,7 +71,7 @@ Producers today: `tranad-score` (TranAD, drift). Machine-readable form:
 ## Rules
 
 1. **An item listed in `items` with no BAD or UNSURE result is GOOD for the run.** A method
-   may list only its flagged units (as dqm_pipeline's `MLEvaluator` does), or list every unit
+   may list only its flagged units (as mu2e_tranad's `MLEvaluator` does), or list every unit
    with explicit `GOOD` results. Both mean the same thing.
 2. **One finding per item per run.** If any unit of an item is BAD, the item is BAD for the
    run. Its finding carries the worst unit, ranked by score/threshold (inverted for
@@ -95,7 +95,7 @@ dqm-assistant supports all except MCP:
 |---|---|---|
 | in-process | a Python subclass of `RemoteDetector` that overrides `fetch` | the method imports cleanly into the assistant's env |
 | command | `command: [python, -m, tranad_score, ..., --sid, "{sid}", "{run}"]` | a separate env, no server; one JSON document per line on stdout |
-| http | `url: http://host:port/score` (POST `{"sid", "run"}`) | a method service, such as the planned `dqm_pipeline.serve` |
+| http | `url: http://host:port/score` (POST `{"sid", "run"}`) | a method service, such as the planned `mu2e_tranad.serve` |
 | file | `path: /dir/{sid}/{run}.json` | replay, tests, or scores written by a batch job |
 | MCP | (not built) | a method service exposed as an MCP tool with the same document as its result |
 

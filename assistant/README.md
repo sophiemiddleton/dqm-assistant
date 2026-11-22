@@ -23,6 +23,7 @@ dqm_assistant/
   service.py       config wiring; the bodies of the MCP tools
   server.py        the MCP server (stdio or streamable-http)
 skills/mu2e-dqm.md the Genesis skill: how an orchestrator should use these tools
+skills/logging-dqm-assessments/  Genesis skill: read and file assessments in agentlog (aitools mcp/agentlog)
 references.yaml    the registry (124228 is a *candidate* until a CRV expert approves it)
 ```
 
@@ -67,6 +68,8 @@ hep-genesis-agent --quick --project dqm-assistant --only-servers dqm-assistant,d
 
 Always pass `--project`: without it a quick chat writes to `~/hep-genesis` (home quota),
 whatever `HEP_PROJECTS_DIR` says.
+
+For the browser UI (tmux, ssh tunnel, token), see [../WEB_UI.md](../WEB_UI.md).
 
 ## Adding a method
 

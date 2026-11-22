@@ -1,11 +1,11 @@
-"""Score one run's DQM points with a trained dqm_pipeline (TranAD) model.
+"""Score one run's DQM points with a trained mu2e_tranad (TranAD) model.
 
 This is the "score this run" service, kept apart from any orchestrator: it reads the run's
-points from the DQM database, runs dqm_pipeline's crv_ml evaluator on them (the same code
+points from the DQM database, runs mu2e_tranad's crv_ml evaluator on them (the same code
 the DQM driver runs), and returns plain JSON. It knows nothing about dqm-assistant, reports,
 references or other methods, and writes nothing to the database.
 
-It only *uses* dqm_pipeline (public MLEvaluator API); nothing in that repo is changed.
+It only *uses* mu2e_tranad (public MLEvaluator API); nothing in that repo is changed.
 
     from tranad_score import Scorer
     s = Scorer(model="/path/crv_tranad_006-001.pkl", sid=118)
@@ -40,7 +40,7 @@ class Scorer:
 
     def __init__(self, model: str, sid: int, detectors: Sequence[str] = ("tranad", "drift"),
                  threshold_scale: float = 1.0, config: str = "tranad-score"):
-        from dqm_pipeline.evaluator import MLEvaluator
+        from mu2e_tranad.evaluator import MLEvaluator
 
         self.model, self.sid, self.detectors = str(model), int(sid), list(detectors)
         self.threshold_scale = float(threshold_scale)

@@ -28,21 +28,19 @@ git clone git@github.com:sophiemiddleton/dqm-assistant.git && cd dqm-assistant
 |---|---|---|
 | this repo's `assistant/` and `tranad-score/` | editable | the server and the TranAD scorer |
 | `mu2e-dqm[hist,evaluate]` | [Mu2e/DQM](https://github.com/Mu2e/DQM) @ v2.1.3 | DQM database reader, histogram KS, evaluator API |
-| `dqm_pipeline` | [Mu2e-TranADDQM](https://github.com/sophiemiddleton/Mu2e-TranADDQM) @ 1da23d3 | TranAD evaluation (`--tranad`) |
-| `anldq` | AIDQM @ a138e911 (private, ssh) | the TranAD model that dqm_pipeline loads (`--tranad`) |
+| `mu2e_tranad` | [mu2e-tranad](https://github.com/sophiemiddleton/mu2e-tranad) @ 1da23d3 | TranAD evaluation (`--tranad`) |
 | `mcp`, `torch` (CPU), ... | PyPI | |
 
 Each git source is a pinned default that can be overridden with an environment variable
-(`DQM_SPEC`, `DQM_PIPELINE_SPEC`, `ANLDQ_SPEC`), set to another ref or to a path to a local
-clone. anldq is installed without its own (very large) dependency list, and with a no-op
-`spt3g` stand-in, because its package imports the SPT-3G loader at load time. See the header
-of `install.sh`.
+(`DQM_SPEC`, `MU2E_TRANAD_SPEC`), set to another ref or to a path to a local clone. The
+TranAD model itself is a copy of ANL's anldq implementation kept inside mu2e_tranad, so
+the private ANL repository is not needed. See the header of `install.sh`.
 
 Also needed:
 - **A harness**: hep-genesis from [Mu2e/aitools](https://github.com/Mu2e/aitools)
-  (`harness/hep-genesis`). Setup and the `servers.json` entry are in
-  [assistant/README.md](assistant/README.md#in-hep-genesis-mu2e-aitools-harness).
-- **Per-user data** outside the repo: config, trained TranAD model (a dqm_pipeline bundle),
+  (`harness/hep-genesis`). Using it from a browser: [WEB_UI.md](WEB_UI.md). The command
+  line and the `servers.json` entry: [assistant/README.md](assistant/README.md#in-hep-genesis-mu2e-aitools-harness).
+- **Per-user data** outside the repo: config, trained TranAD model (a mu2e_tranad bundle),
   histogram cache and store, by default in `/exp/mu2e/data/users/$USER/dqm-assistant/`.
   Start from [assistant/config.example.yaml](assistant/config.example.yaml).
 - **Access** to the Mu2e DQM database (Query Engine) and, for KS, the DQM histogram files
@@ -122,7 +120,7 @@ assistant is method-agnostic.
 
 - **Detectors** answer a narrow question with a score. They know nothing about other runs or other
   methods. tranad-score is kept separate so the scoring service and its torch dependency can live
-  elsewhere, for example behind `dqm_pipeline`.
+  elsewhere, for example behind `mu2e_tranad`.
 - **dqm-assistant** holds the domain logic that should not depend on an LLM: memory across runs,
   onset detection, run-type context, false-alarm modes, and cross-method corroboration. Its output
   is deterministic and covered by tests.

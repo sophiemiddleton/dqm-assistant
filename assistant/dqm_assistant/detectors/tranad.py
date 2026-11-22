@@ -1,13 +1,13 @@
 """TranAD via tranad-score: the generic `remote` detector plus TranAD's MethodCard.
 
-Scoring (reading the run's DQM points, running dqm_pipeline's crv_ml evaluator) lives in
+Scoring (reading the run's DQM points, running mu2e_tranad's crv_ml evaluator) lives in
 tranad-score/ (repo root), which emits dqm-method-scores/1. This plugin adds no
 interpretation of its own: remote.to_findings applies the schema's rules (one Finding per
 item per run, BAD if any subrun is flagged, carrying the worst subrun).
 
 Two ways to run the scorer:
 
-    # in-process: needs install.sh --tranad (torch, dqm_pipeline, anldq) in dqm-assistant's venv
+    # in-process: needs install.sh --tranad (torch, mu2e_tranad) in dqm-assistant's venv
     - {type: tranad, model: /path/crv_tranad_006-001.pkl, detectors: [tranad, drift]}
 
     # separate env: dqm-assistant needs no torch; the CLI reloads the model on every run

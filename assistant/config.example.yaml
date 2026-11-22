@@ -11,7 +11,7 @@ subsystems:
     source_version: "006-001"
     dataset_dir: /pnfs/mu2e/persistent/datasets/phy-ntd/dqm/mu2e/cosmics_crv/crvreco-006-001-file
     default_run_type: cosmics # until the runs MCP is wired in
-    # periods: /abs/periods_006-001.csv     # e.g. from Mu2e-TranADDQM configs/   # period,start_run,end_run
+    # periods: /abs/periods_006-001.csv     # e.g. from mu2e-tranad configs/   # period,start_run,end_run
     items:                    # histogram paths inside the DQM files
       - crvRecoDQM/PEr
       - crvRecoDQM/logchi2
@@ -23,7 +23,7 @@ subsystems:
     detectors:                # the method-agnostic part: any list of plugins
       - {type: ks}
       # TranAD: run the crv_ml model directly (needs install.sh --tranad), or read its alarms
-      # once crv_ml commits them. Train with: python -m dqm_pipeline --csv <matrix> --save-model <pkl>
+      # once crv_ml commits them. Train with: python -m mu2e_tranad --csv <matrix> --save-model <pkl>
       - {type: tranad, model: /path/to/crv_tranad_006-001.pkl, detectors: [tranad, drift]}
       # ...or the scorer from another venv, so this one needs no torch (~20 s/run: reloads model):
       # - type: tranad

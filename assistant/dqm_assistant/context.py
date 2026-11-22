@@ -47,7 +47,7 @@ class RunContext:
 
 
 def period_for(run: int, periods_csv: Optional[str]) -> Optional[str]:
-    """`period,start_run,end_run` rows (as dqm_pipeline/configs/periods_005-001.csv)."""
+    """`period,start_run,end_run` rows (as mu2e_tranad/configs/periods_005-001.csv)."""
     if not periods_csv:
         return None
     with open(periods_csv) as f:

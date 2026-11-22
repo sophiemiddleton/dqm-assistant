@@ -1,15 +1,15 @@
 # tranad-score
 
 The "score this run" service for TranAD, kept apart from the orchestrator (dqm-assistant).
-Given a trained dqm_pipeline model and a DQM source id, it reads one run's points from the
-DQM database, runs dqm_pipeline's `crv_ml` evaluator on them (the same code as the DQM
+Given a trained mu2e_tranad model and a DQM source id, it reads one run's points from the
+DQM database, runs mu2e_tranad's `crv_ml` evaluator on them (the same code as the DQM
 driver), and returns plain JSON. It writes nothing and knows nothing about dqm-assistant.
 
-It only *imports* dqm_pipeline (`MLEvaluator`, public API, from github.com/sophiemiddleton/Mu2e-TranADDQM)
+It only *imports* mu2e_tranad (`MLEvaluator`, public API, from github.com/sophiemiddleton/mu2e-tranad)
 and changes nothing in that repo.
 
 ```bash
-../install.sh --tranad                    # dqm_pipeline, anldq, torch, mu2e-dqm into ../.venv
+../install.sh --tranad                    # mu2e_tranad, torch, mu2e-dqm into ../.venv
 ../.venv/bin/tranad-score --model crv_tranad_006-001.pkl --sid 118 125846 122834
 ```
 
@@ -29,4 +29,4 @@ as GOOD.
 dqm-assistant reads it with its generic `remote` detector; `tranad` is that detector plus a
 MethodCard and an in-process `Scorer`. With `transport: {command: [...]}` the assistant
 instead runs this CLI in the torch env, so the assistant's own env needs no torch. Next step,
-not built: an HTTP/MCP service (`dqm_pipeline.serve`) that keeps the model loaded.
+not built: an HTTP/MCP service (`mu2e_tranad.serve`) that keeps the model loaded.
