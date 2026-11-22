@@ -40,6 +40,7 @@ Also needed:
 - **A harness**: hep-genesis from [Mu2e/aitools](https://github.com/Mu2e/aitools)
   (`harness/hep-genesis`). Using it from a browser: [WEB_UI.md](WEB_UI.md). The command
   line and the `servers.json` entry: [assistant/README.md](assistant/README.md#in-hep-genesis-mu2e-aitools-harness).
+  Keeping conclusions in agentlog: [assistant/README.md](assistant/README.md#with-agentlog-keeping-the-conclusions).
 - **Per-user data** outside the repo: config, trained TranAD model (a mu2e_tranad bundle),
   histogram cache and store, by default in `/exp/mu2e/data/users/$USER/dqm-assistant/`.
   Start from [assistant/config.example.yaml](assistant/config.example.yaml).

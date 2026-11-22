@@ -25,8 +25,9 @@ readable by everyone. Follow the steps and the template; do not improvise the su
    assessment. **A human correction (`supersedes`, `triggered_by: human`) outranks
    dqm-assistant's classification** for the same issue: say so if they disagree.
 
-Do not skip `assess_run` because a report exists, unless the user only asked what was
-concluded before. Runs get reprocessed and references change.
+**Always still call `assess_run`** (step 2), even when a report exists: an agentlog report is
+context, not a substitute. Skip it only if the user asked nothing but what was concluded
+before. Runs get reprocessed, references change, and a filed report can be wrong.
 
 ## 2. Assess
 
@@ -37,7 +38,8 @@ Follow the `mu2e-dqm` skill: `dqm-assistant.assess_run(run)`, then any drill-dow
 | Situation | File? |
 |---|---|
 | Woken by an alarm or a schedule (`triggered_by: alarm` / `schedule`) | Yes, always, including `GOOD` |
-| A user asked about the run, and the session is interactive | **Ask first** ("File this in agentlog?"); file only on yes |
+| A user asked about the run, and the session is interactive | **Ask first**: show title, severity, subjects and a short body summary, ask "File this permanently in agentlog?", and file only on an explicit yes to that question |
+| The user says "make a report", "write a report" or "summarise" | **No.** That is an answer or hep-genesis's session report, not agentlog. Offer agentlog only if it fits, and ask as above |
 | Only drill-down (`get_findings`, `history`, `compare`) on a run already reported in this session | No; add it to the report you file, or as a `followup_of` (step 5) |
 | The new assessment says the same as the latest report, nothing new found | No; tell the user the earlier report still stands |
 | `assess_run` failed or returned nothing | No report about the run. If the *tool* is broken, a report with subject `mcp:dqm-assistant.assess_run` is legitimate |

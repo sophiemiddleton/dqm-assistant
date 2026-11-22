@@ -80,6 +80,9 @@ Skip what you already have.
    {"name": "dqm-assistant", "transport": "stdio",
     "command": "/abs/path/to/dqm-assistant/assistant/start-stdio.sh"}
    ```
+5. **Optional, agentlog** (to keep conclusions): turn on the `agentlog` registry server under
+   *Servers*, and link the skill into the hep-genesis workspace. See
+   [assistant/README.md](assistant/README.md#with-agentlog-keeping-the-conclusions).
 
 ## Troubleshooting
 

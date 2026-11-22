@@ -38,7 +38,7 @@ CFG=/exp/mu2e/data/users/$USER/dqm-assistant/config.yaml
 $PY -m pytest -q tests                                             # offline: fake detectors
 $PY -m dqm_assistant --config $CFG --no-llm replay 124189 124537 125846
 ./start-stdio.sh                                                   # stdio, for hep-genesis
-$PY -m dqm_assistant.server --config $CFG --http --port 8010       # HTTP, next to the other servers
+$PY -m dqm_assistant.server --config $CFG --http --port 8030       # HTTP, next to the other servers
 ```
 
 ### In hep-genesis (Mu2e aitools harness)
@@ -70,6 +70,72 @@ Always pass `--project`: without it a quick chat writes to `~/hep-genesis` (home
 whatever `HEP_PROJECTS_DIR` says.
 
 For the browser UI (tmux, ssh tunnel, token), see [../WEB_UI.md](../WEB_UI.md).
+
+### With agentlog (keeping the conclusions)
+
+[agentlog](https://github.com/Mu2e/aitools/tree/main/mcp/agentlog) is the Mu2e logbook of
+agent investigations. dqm-assistant works out what is wrong with a run; agentlog keeps what
+was concluded, so the next person or agent can read it, and a human can correct it. Reports
+there are **permanent and public**: nothing can edit or delete one, and a correction is a new
+report linked to the old one. dqm-assistant itself never writes to agentlog: the agent does,
+following the skill `skills/logging-dqm-assessments/SKILL.md`.
+
+Two steps, both once:
+
+1. **Connect the agentlog server.** It is a Mu2e server in the registry (port 8010 on
+   mu2eaigpvm01, in `aitools/mcp/registry/config/ports.json`), and it needs your mikey token,
+   which hep-genesis already uses for the other registry servers. Turn it on in the web UI
+   under *Servers*, or add it to `registry_enabled` in
+   `/exp/mu2e/data/users/$USER/hep-genesis-data/servers.json`:
+   ```json
+   "registry_enabled": { ..., "agentlog": true }
+   ```
+   Your reports are filed under the name of your mikey key; that name is the author, it is
+   not a tool argument.
+
+2. **Give hep-genesis the skill.** hep-genesis reads skills from its workspace,
+   `$HEP_WORKSPACE_DIR/skills/*.md` (`/exp/mu2e/data/users/$USER/hep-genesis-data/workspace/skills`
+   after `env.sh`), one Markdown file per skill, and the agent loads one with `load_skill`
+   when its description matches the question. Link the skill there, so a `git pull` here
+   updates it:
+   ```bash
+   ln -s /abs/path/dqm-assistant/assistant/skills/logging-dqm-assessments/SKILL.md \
+         /exp/mu2e/data/users/$USER/hep-genesis-data/workspace/skills/logging-dqm-assessments.md
+   ```
+   (`aitools/harness/shared/link-skills.py` and its `skills.conf` are for the Claude Code and
+   goose harnesses, not hep-genesis.)
+
+3. **Make sure the model uses it.** In testing, gpt-oss did not load the skill on its own.
+   `skills/logging-dqm-assessments/genesis-context.md` is a short section for hep-genesis's
+   context file (`HEP_CONTEXT_FILE`), which goes into every chat's system prompt. Its heading
+   is tagged `[agentlog]`, so it is only included when agentlog is connected. It tells the model to
+   load the skill, to check agentlog before `assess_run`, and never to file without a yes. It
+   also says agentlog is the one place the model may write, since Mu2e's context says
+   the agent is read-only. Append it to Mu2e's context and point hep-genesis at the result:
+   ```bash
+   D=/exp/mu2e/data/users/$USER/hep-genesis-data
+   cat /exp/mu2e/app/users/$USER/hep-genesis/current/site/context.md \
+       /abs/path/dqm-assistant/assistant/skills/logging-dqm-assessments/genesis-context.md > $D/context.md
+   echo "HEP_CONTEXT_FILE=$D/context.md" >> $D/.env      # once; the .env wins over env.sh
+   ```
+   The result is a copy: after updating hep-genesis/aitools, or editing the section, rerun the
+   `cat` (not the `echo`).
+
+Then add `agentlog` to the servers of a chat:
+
+```bash
+hep-genesis-agent --quick --project dqm-assistant --only-servers dqm-assistant,dqm,runs,agentlog \
+    --tool-timeout 600 --no-report "What is going on with run 125846? Has anyone looked at it?"
+```
+
+The agent checks agentlog for earlier reports on the run, runs `assess_run`, and in a chat
+**asks before filing** a report. Started by an automation (for example aitools'
+`dqm-alarm` template, with `agentlog` added to its `action.servers`), it files without asking.
+Read what was filed with `agentlog.list_reports(run=...)` or `get_report(id)`.
+
+Note: dqm-assistant's HTTP mode defaults to port 8030. It used 8010 until 2026-11-22, which is
+agentlog's port in the registry (`aitools/mcp/registry/config/ports.json`); 8030 is not
+assigned there.
 
 ## Adding a method
 

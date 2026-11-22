@@ -1,7 +1,7 @@
 """dqm-assistant as an MCP server: what an orchestrator (Genesis, Claude, ...) sees.
 
     python -m dqm_assistant.server --config config.yaml                       # stdio (Genesis local)
-    python -m dqm_assistant.server --config config.yaml --http --port 8010    # next to the mu2eaigpvm01 servers
+    python -m dqm_assistant.server --config config.yaml --http --port 8030    # next to the mu2eaigpvm01 servers
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ def main(argv=None) -> None:
     ap.add_argument("--no-llm", action="store_true")
     ap.add_argument("--http", action="store_true")
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8010)
+    ap.add_argument("--port", type=int, default=8030)
     a = ap.parse_args(argv)
     _svc = Service(a.config, use_llm=not a.no_llm)
     if a.http:
