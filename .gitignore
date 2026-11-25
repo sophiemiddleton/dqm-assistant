@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 *.pkl
 *.egg-info/
+.venv/
+.uv/
+.uv-python/
