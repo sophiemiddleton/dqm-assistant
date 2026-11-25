@@ -12,8 +12,8 @@ dqm_assistant/
                      ks.py          dqm.hist.compare against the reference
                      remote.py      any method emitting dqm-method-scores/1 (command, http or file)
                      tranad.py      remote + TranAD's card; scoring lives in ../tranad-score
-                     dqm_alarms.py  anything already in the DQM driver (crv_ml/TranAD, limits)
-                     vision.py      Mu2e-VisionDQM reviewer (needs LITELLM_API_KEY)
+                     dqm_alarms.py  anything already in the DQM driver (tranad, limits)
+                     vision.py      mu2e-vision reviewer (needs LITELLM_API_KEY)
   histsource.py    run -> dqm.files -> /pnfs path -> summed run histograms (cached)
   references.py    YAML reference registry; only `approved` entries are used
   context.py       RunContext: run type, period, reference, histogram access

@@ -199,7 +199,7 @@ def _scores(**kw):
 
 
 def test_tranad_score_output_reads_as_schema():
-    """tranad-score's MLEvaluator notes -> schema doc -> one Finding per item; no model or DB."""
+    """tranad-score's TranADEvaluator notes -> schema doc -> one Finding per item; no model or DB."""
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tranad-score"))
     from tranad_score.score import _result

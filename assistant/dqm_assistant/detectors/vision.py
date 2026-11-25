@@ -1,6 +1,6 @@
-"""Vision-LLM review of each histogram against its reference, reusing Mu2e-VisionDQM.
+"""Vision-LLM review of each histogram against its reference, reusing mu2e-vision.
 
-Needs HistCompare/Mu2e-VisionDQM on PYTHONPATH and LITELLM_API_KEY. One model call per
+Needs HistCompare/mu2e-vision on PYTHONPATH and LITELLM_API_KEY. One model call per
 histogram, so it is the slow, costly detector: enable it per subsystem in the config.
 """
 

@@ -2,11 +2,11 @@
 
 The "score this run" service for TranAD, kept apart from the orchestrator (dqm-assistant).
 Given a trained mu2e_tranad model and a DQM source id, it reads one run's points from the
-DQM database, runs mu2e_tranad's `crv_ml` evaluator on them (the same code as the DQM
+DQM database, runs the DQM `tranad` evaluator on them (the same code as the DQM
 driver), and returns plain JSON. It writes nothing and knows nothing about dqm-assistant.
 
-It only *imports* mu2e_tranad (`MLEvaluator`, public API, from github.com/sophiemiddleton/mu2e-tranad)
-and changes nothing in that repo.
+It only *imports* `TranADEvaluator` from Mu2e/DQM (`dqm.evaluate.tranad`), which loads models
+trained by github.com/Mu2e/mu2e-tranad, and changes nothing in either repo.
 
 ```bash
 ../install.sh --tranad                    # mu2e_tranad, torch, mu2e-dqm into ../.venv
@@ -23,7 +23,7 @@ s.score_run(reader, 125846)
 
 The output is a [dqm-method-scores/1](../method-scores/SCHEMA.md) document, the common
 contract for methods that run outside dqm-assistant. Only flagged (subrun, item) pairs are
-listed: MLEvaluator returns nothing for a passing point, and the schema reads an unlisted item
+listed: TranADEvaluator returns nothing for a passing point, and the schema reads an unlisted item
 as GOOD.
 
 dqm-assistant reads it with its generic `remote` detector; `tranad` is that detector plus a

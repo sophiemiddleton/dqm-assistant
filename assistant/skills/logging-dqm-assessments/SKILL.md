@@ -76,7 +76,7 @@ or the alarm system's call):
 run:<run>
 system:<subsystem lower-case>
 metric:<group>/<subgroup>/<name>        one per item in a new/persistent group, at most 10
-alarm:<group>/<subgroup>/<name>@<algo>  only for items flagged by a dqm_alarms method (e.g. @crv_ml, @limits)
+alarm:<group>/<subgroup>/<name>@<algo>  only for items flagged by a dqm_alarms method (e.g. @tranad, @limits)
 ```
 
 dqm-assistant names items `group,subgroup,name` with commas. **Replace the commas with `/`**

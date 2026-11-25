@@ -36,7 +36,7 @@ done
 dest="${dest:-$here/.venv}"
 
 DQM_SPEC="${DQM_SPEC:-mu2e-dqm[hist,evaluate] @ git+https://github.com/Mu2e/DQM@v2.1.3#subdirectory=python}"
-MU2E_TRANAD_SPEC="${MU2E_TRANAD_SPEC:-mu2e-tranad @ git+https://github.com/sophiemiddleton/mu2e-tranad@1da23d3}"
+MU2E_TRANAD_SPEC="${MU2E_TRANAD_SPEC:-mu2e-tranad @ git+https://github.com/Mu2e/mu2e-tranad@961d4ab}"
 # Beyond torch and mu2e_tranad's own requirements
 TRANAD_DEPS=(pyyaml)
 

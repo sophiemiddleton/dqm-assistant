@@ -22,8 +22,8 @@ subsystems:
     mean: []                  # items averaged over subruns instead of summed
     detectors:                # the method-agnostic part: any list of plugins
       - {type: ks}
-      # TranAD: run the crv_ml model directly (needs install.sh --tranad), or read its alarms
-      # once crv_ml commits them. Train with: python -m mu2e_tranad --csv <matrix> --save-model <pkl>
+      # TranAD: run the tranad model directly (needs install.sh --tranad), or read its alarms
+      # once tranad commits them. Train with: python -m mu2e_tranad --csv <matrix> --save-model <pkl>
       - {type: tranad, model: /path/to/crv_tranad_006-001.pkl, detectors: [tranad, drift]}
       # ...or the scorer from another venv, so this one needs no torch (~20 s/run: reloads model):
       # - type: tranad
@@ -31,6 +31,6 @@ subsystems:
       # Any other method emitting dqm-method-scores/1 (../method-scores/SCHEMA.md):
       # - {type: remote, method: my_method, url: http://localhost:8020/score,
       #    card: {compares: "...", granularity: metric, needs_reference: false}}
-      # - {type: dqm_alarms, algo: crv_ml, card: tranad}
+      # - {type: dqm_alarms, algo: tranad, card: tranad}
       - {type: dqm_alarms, algo: limits, card: limits}
-      # - {type: vision, instructions: /abs/HistCompare/Mu2e-VisionDQM/instructions/crv_real_draft.yaml}
+      # - {type: vision, instructions: /abs/HistCompare/mu2e-vision/instructions/crv_real_draft.yaml}

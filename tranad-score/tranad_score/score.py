@@ -1,11 +1,12 @@
 """Score one run's DQM points with a trained mu2e_tranad (TranAD) model.
 
 This is the "score this run" service, kept apart from any orchestrator: it reads the run's
-points from the DQM database, runs mu2e_tranad's crv_ml evaluator on them (the same code
-the DQM driver runs), and returns plain JSON. It knows nothing about dqm-assistant, reports,
+points from the DQM database, runs the DQM `tranad` evaluator on them (the same code the
+DQM driver runs), and returns plain JSON. It knows nothing about dqm-assistant, reports,
 references or other methods, and writes nothing to the database.
 
-It only *uses* mu2e_tranad (public MLEvaluator API); nothing in that repo is changed.
+It only *uses* dqm.evaluate.tranad.TranADEvaluator and the mu2e_tranad model bundle;
+nothing in either repo is changed.
 
     from tranad_score import Scorer
     s = Scorer(model="/path/crv_tranad_006-001.pkl", sid=118)
@@ -19,7 +20,7 @@ Output: one dqm-method-scores/1 document per run (../method-scores/SCHEMA.md):
      "results": [{"item", "subrun", "flag": "BAD", "score", "threshold", "top": [...]}, ...],
      "params": {"detectors", "threshold_scale"}}
 
-Only flagged (subrun, item) pairs are listed -- MLEvaluator reports nothing for a point
+Only flagged (subrun, item) pairs are listed -- TranADEvaluator reports nothing for a point
 that passes, and the schema reads an unlisted item as GOOD. n_scored == 0 means the run has
 no points for this source. For training_drift, score is the largest |shift| in sigma and
 threshold is the drift sigma: the evaluator's own rule (drifted iff |shift| > sigma).
@@ -40,13 +41,16 @@ class Scorer:
 
     def __init__(self, model: str, sid: int, detectors: Sequence[str] = ("tranad", "drift"),
                  threshold_scale: float = 1.0, config: str = "tranad-score"):
-        from mu2e_tranad.evaluator import MLEvaluator
+        try:  # the evaluator lives in Mu2e/DQM (dqm.evaluate.tranad)
+            from dqm.evaluate.tranad import TranADEvaluator
+        except ImportError:  # older installs: it was mu2e_tranad.evaluator.MLEvaluator
+            from mu2e_tranad.evaluator import MLEvaluator as TranADEvaluator
 
         self.model, self.sid, self.detectors = str(model), int(sid), list(detectors)
         self.threshold_scale = float(threshold_scale)
-        self._ev = MLEvaluator(config, self.sid, pars={"model": self.model,
-                                                       "detectors": self.detectors,
-                                                       "threshold_scale": threshold_scale})
+        self._ev = TranADEvaluator(config, self.sid, pars={"model": self.model,
+                                                           "detectors": self.detectors,
+                                                           "threshold_scale": threshold_scale})
         self._ev.configure()
         self._history = None
 
@@ -82,7 +86,7 @@ class Scorer:
 
 
 def _result(subject: str, subrun, note: Dict[str, Any]) -> Dict[str, Any]:
-    """One MLEvaluator alarm note -> one schema result (always BAD: passes are not reported)."""
+    """One TranADEvaluator alarm note -> one schema result (always BAD: passes are not reported)."""
     note.pop("model", None)                              # same for every result; in method_version
     top = note.pop("top", [])
     r: Dict[str, Any] = {"item": subject, "subrun": subrun, "flag": "BAD", "top": top}

@@ -1,10 +1,10 @@
 """Any evaluator that already runs in the Mu2e DQM driver: read its alarms from the database.
 
-TranAD (`crv_ml`, see mu2e_tranad/evaluator/ml_evaluator.py) and the limits evaluator already write
+TranAD (`tranad`, see dqm/evaluate/tranad.py in Mu2e/DQM) and the limits evaluator already write
 episodes to dqm.alarms with per-interval evidence in dqm.alarm_causes. Rather than
 re-running them here, this plugin reads what they decided. One instance per `algo`:
 
-    - {type: dqm_alarms, algo: crv_ml, card: tranad}
+    - {type: dqm_alarms, algo: tranad, card: tranad}
     - {type: dqm_alarms, algo: limits, card: limits}
 """
 

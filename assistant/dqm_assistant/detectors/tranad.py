@@ -1,6 +1,6 @@
 """TranAD via tranad-score: the generic `remote` detector plus TranAD's MethodCard.
 
-Scoring (reading the run's DQM points, running mu2e_tranad's crv_ml evaluator) lives in
+Scoring (reading the run's DQM points, running the DQM tranad evaluator) lives in
 tranad-score/ (repo root), which emits dqm-method-scores/1. This plugin adds no
 interpretation of its own: remote.to_findings applies the schema's rules (one Finding per
 item per run, BAD if any subrun is flagged, carrying the worst subrun).
@@ -14,7 +14,7 @@ Two ways to run the scorer:
     - type: tranad
       command: [/path/other-venv/bin/tranad-score, --model, /path/m.pkl, --sid, "{sid}", "{run}"]
 
-Use `dqm_alarms` (algo crv_ml) instead once crv_ml commits its alarms through the DQM driver.
+Use `dqm_alarms` (algo tranad) instead once tranad commits its alarms through the DQM driver.
 tranad-score is found on PYTHONPATH, or else as the sibling directory ../tranad-score.
 """
 
