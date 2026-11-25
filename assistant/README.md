@@ -9,11 +9,13 @@ histogram access and references: [PLAN_hists_refs.md](PLAN_hists_refs.md).
 dqm_assistant/
   findings.py      Finding, MethodCard, Group, RunReport  -- the only L1 -> L2 interface
   detectors/       L1 plugins: base.py (contract + registry)
-                     ks.py          dqm.hist.compare against the reference
+                     _hc.py         mu2e-histcompare Result -> Finding (shared by ks, vision, hydra)
+                     ks.py          mu2e_histcompare.ks: KS against the reference (0.05 / 0.01)
                      remote.py      any method emitting dqm-method-scores/1 (command, http or file)
                      tranad.py      remote + TranAD's card; scoring lives in ../tranad-score
                      dqm_alarms.py  anything already in the DQM driver (tranad, limits)
-                     vision.py      mu2e-vision reviewer (needs LITELLM_API_KEY)
+                     vision.py      mu2e_histcompare.vision: vision LLM (needs LITELLM_API_KEY)
+                     hydra.py       mu2e_histcompare.hydra: per-histogram CNN, no reference (torch)
   histsource.py    run -> dqm.files -> /pnfs path -> summed run histograms (cached)
   references.py    YAML reference registry; only `approved` entries are used
   context.py       RunContext: run type, period, reference, histogram access
@@ -172,10 +174,26 @@ expected KS behaviour, and it shows the gap below.
 Known gaps:
 - Corroboration needs two methods on the *same* item. TranAD and limits judge metrics, KS
   judges histograms, so they never confirm or contradict each other. The vision detector (or
-  HYDRA) on the same histograms is what turns "KS alone" into method_artefact.
+  HYDRA) on the same histograms is what turns "KS alone" into method_artefact (see the
+  KS + HYDRA test below).
 - KS gives no locus, so a dead block cannot be grouped by channel range. A per-half-block
   rate detector (as used to check the vision verdicts) would supply one.
 - Run type is a config default until the runs MCP (token needed) is wired in.
+
+### KS + HYDRA test (2026-11-25)
+
+The histogram detectors now come from mu2e-histcompare; KS uses its thresholds for two
+independent runs (0.05 / 0.01). HYDRA variant C (mu2e-hydra run `real-006-001-C`, models now in `/exp/mu2e/data/users/sophie/dqm-assistant/models/hydra-006-001-C`:
+PEr, logchi2, crvDigisPerChannel, h1_peakAdc; no model for errorBits or activeFebCount, so
+those are UNSURE), against reference 124228:
+
+| run | KS (6 histograms) | HYDRA (4 with a model) | verdict |
+|---|---|---|---|
+| 125846 (dead channel blocks) | 4 BAD (p = 0) | logchi2, crvDigisPerChannel BAD | BAD: those two are `new`, confirmed by both; PEr, h1_peakAdc are KS-only `method_artefact` |
+| 124203 (clean) | 4 BAD (p = 0) | all GOOD | GOOD: every KS flag is a `method_artefact` |
+
+At these statistics the threshold change makes no difference (p = 0 either way); what
+changes the verdict is a second method on the same histograms.
 
 ### KS + TranAD test (2026-11-18)
 

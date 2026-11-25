@@ -2,16 +2,19 @@
 # Build the Python environment for dqm-assistant from git sources only: no local checkouts of
 # anyone's other code are needed.
 #
-#   ./install.sh [DEST] [--tranad] [--python VERSION]
+#   ./install.sh [DEST] [--tranad] [--hydra] [--python VERSION]
 #
 #   DEST       the venv to create or update (default: .venv in this repository)
 #   --tranad   also install TranAD: tranad-score, mu2e_tranad and torch (CPU)
+#   --hydra    also install torch (CPU), for the hydra histogram detector
 #   --python   Python for the venv (default 3.12; uv downloads it if needed)
 #
 # What goes in, each a pip requirement you can override with a git URL at another ref, or a
 # path to a local clone (for example MU2E_TRANAD_SPEC=/path/to/mu2e-tranad):
 #
 #   DQM_SPEC           DJ's Mu2e/DQM python package (dqm.reader, dqm.hist, dqm.evaluate)
+#   MU2E_HISTCOMPARE_SPEC  the histogram methods ks, vision, hydra (with the mu2e-vision and
+#                      mu2e-hydra code and the vision plot instructions bundled)
 #   MU2E_TRANAD_SPEC   mu2e_tranad (TranAD training/evaluation; carries its own copy
 #                      of the ANL TranAD model, so anldq is not needed)          --tranad
 #
@@ -23,11 +26,12 @@
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
-dest="" tranad=0 python=3.12
+dest="" tranad=0 hydra=0 python=3.12
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help) sed -n '2,/^$/s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;;
     --tranad) tranad=1; shift ;;
+    --hydra) hydra=1; shift ;;
     --python) python="${2:?--python needs a version}"; shift 2 ;;
     -*) echo "unknown option $1" >&2; exit 2 ;;
     *) [[ -z "$dest" ]] || { echo "one DEST only" >&2; exit 2; }; dest="$1"; shift ;;
@@ -36,6 +40,7 @@ done
 dest="${dest:-$here/.venv}"
 
 DQM_SPEC="${DQM_SPEC:-mu2e-dqm[hist,evaluate] @ git+https://github.com/Mu2e/DQM@v2.1.3#subdirectory=python}"
+MU2E_HISTCOMPARE_SPEC="${MU2E_HISTCOMPARE_SPEC:-mu2e-histcompare[vision] @ git+https://github.com/sophiemiddleton/mu2e-histcompare@main}"
 MU2E_TRANAD_SPEC="${MU2E_TRANAD_SPEC:-mu2e-tranad @ git+https://github.com/Mu2e/mu2e-tranad@961d4ab}"
 # Beyond torch and mu2e_tranad's own requirements
 TRANAD_DEPS=(pyyaml)
@@ -56,24 +61,33 @@ if [[ -z "$uv" ]]; then
   fi
 fi
 
-echo "[1/3] venv $dest (Python $python)"
+echo "[1/4] venv $dest (Python $python)"
 "$uv" venv -q --allow-existing --python "$python" "$dest"
 py="$dest/bin/python"
 
-echo "[2/3] dqm-assistant + mu2e-dqm ($DQM_SPEC)"
-"$uv" pip install -q --python "$py" "$DQM_SPEC" -e "$here/assistant[llm,test]"
+echo "[2/4] dqm-assistant + mu2e-dqm ($DQM_SPEC) + mu2e-histcompare ($MU2E_HISTCOMPARE_SPEC)"
+"$uv" pip install -q --python "$py" "$DQM_SPEC" "$MU2E_HISTCOMPARE_SPEC" -e "$here/assistant[llm,test]"
 
 if (( tranad )); then
-  echo "[3/3] TranAD: tranad-score, mu2e_tranad ($MU2E_TRANAD_SPEC), torch (CPU)"
+  echo "[3/4] TranAD: tranad-score, mu2e_tranad ($MU2E_TRANAD_SPEC), torch (CPU)"
   "$uv" pip install -q --python "$py" --torch-backend "${UV_TORCH_BACKEND:-cpu}" \
     "$DQM_SPEC" "$MU2E_TRANAD_SPEC" -e "$here/tranad-score" torch "${TRANAD_DEPS[@]}"
   "$py" -c "import mu2e_tranad.training.tranad_model as t; assert t.TRANAD_ANL_AVAILABLE, 'TranAD not importable'" \
     || { echo "ERROR: TranAD does not import; see the message above" >&2; exit 1; }
 else
-  echo "[3/3] TranAD skipped (--tranad to add it)"
+  echo "[3/4] TranAD skipped (--tranad to add it)"
 fi
 
-"$py" -c "import dqm_assistant.server, dqm.reader, dqm.hist.compare, dqm.evaluate.points" || { echo "ERROR: dqm-assistant does not import" >&2; exit 1; }
+if (( hydra )); then
+  echo "[4/4] hydra: torch (CPU)"
+  "$uv" pip install -q --python "$py" --torch-backend "${UV_TORCH_BACKEND:-cpu}" \
+    "$DQM_SPEC" "$MU2E_HISTCOMPARE_SPEC" torch
+  "$py" -c "import mu2e_histcompare.hydra" || { echo "ERROR: hydra does not import" >&2; exit 1; }
+else
+  echo "[4/4] hydra skipped (--hydra to add it)"
+fi
+
+"$py" -c "import dqm_assistant.server, dqm.reader, dqm.hist.compare, dqm.evaluate.points, mu2e_histcompare.ks, mu2e_histcompare.vision" || { echo "ERROR: dqm-assistant does not import" >&2; exit 1; }
 echo
 echo "Done: $dest"
 echo "  tests:  $py -m pytest -q $here/assistant/tests"

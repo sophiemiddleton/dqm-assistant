@@ -33,4 +33,12 @@ subsystems:
       #    card: {compares: "...", granularity: metric, needs_reference: false}}
       # - {type: dqm_alarms, algo: tranad, card: tranad}
       - {type: dqm_alarms, algo: limits, card: limits}
-      # - {type: vision, instructions: /abs/HistCompare/mu2e-vision/instructions/crv_real_draft.yaml}
+      # Histogram methods from mu2e-histcompare, on the same items as ks, so they can confirm or
+      # overrule it. hydra: per-histogram CNN, no reference (install.sh --hydra); models from
+      # mu2e-hydra (python -m hydra_mu2e.realdata run ...), items without a model are UNSURE.
+      # - {type: hydra, models: /abs/models/hydra-006-001-C, threshold: 0.5}
+      # vision: one LLM call per histogram (LITELLM_API_KEY); instructions are a name bundled
+      # with mu2e-histcompare (crv_real_draft) or a path to a YAML. on_demand: not run by
+      # assess_run, only by compare(run, item, method="vision") -- any detector can take it.
+      # - {type: vision, instructions: crv_real_draft, model: azure/claude-opus-5-5, on_demand: true}
+      # ks options: {type: ks, tight: 0.05, loose: 0.01}  (mu2e-histcompare's defaults)

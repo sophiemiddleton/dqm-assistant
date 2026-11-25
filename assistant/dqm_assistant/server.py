@@ -61,7 +61,8 @@ def get_findings(run: int, subsystem: str = "CRV", method: Optional[str] = None)
 
 @mcp.tool()
 def compare(run: int, item: str, subsystem: str = "CRV", method: str = "ks") -> list:
-    """Run one method on one histogram/metric of one run, now, against the run's reference."""
+    """Run one method on one histogram/metric of one run, now, against the run's reference.
+    Also the only way to run an on-demand method (list_methods: on_demand true), e.g. vision."""
     return svc().compare(run, item, subsystem, method)
 
 
@@ -80,7 +81,8 @@ def list_flagged(subsystem: str = "CRV", since_run: int = 0, cls: Optional[str] 
 
 @mcp.tool()
 def list_methods(subsystem: str = "CRV") -> list:
-    """Method cards of the enabled detectors: what each compares and how it is known to fail."""
+    """Method cards of the enabled detectors: what each compares and how it is known to fail.
+    on_demand true: not part of assess_run; run it with compare(run, item, method=...)."""
     return svc().list_methods(subsystem)
 
 

@@ -1,17 +1,23 @@
-"""KS / fraction shape test against the reference -- DJ's dqm.hist.compare, unchanged."""
+"""KS shape test against the reference: mu2e_histcompare.ks (DJ's dqm.hist.compare).
+
+The thresholds are mu2e-histcompare's for two independent runs (independent=True,
+tight 0.05, loose 0.01), not dqm.hist.compare's defaults (0.999 / 0.99, meant for
+comparing a sample with itself), so the assistant and the histcompare studies give the
+same verdict on the same histogram. BAD when the KS probability is below `loose`.
+"""
 
 from __future__ import annotations
 
 from typing import List
 
 from dqm_assistant.context import RunContext
+from dqm_assistant.detectors import _hc
 from dqm_assistant.detectors.base import Detector, register
-from dqm_assistant.findings import BAD, GOOD, UNSURE, Finding, MethodCard
+from dqm_assistant.findings import Finding, MethodCard
 
 
 @register("ks")
 class KSDetector(Detector):
-    version = "dqm.hist.compare"
     card = MethodCard(
         name="ks",
         compares="histogram shape vs reference (ROOT KolmogorovTest probability)",
@@ -24,30 +30,27 @@ class KSDetector(Detector):
         calibrated=False,
     )
 
+    def __init__(self, tight: float = 0.05, loose: float = 0.01, **options):
+        super().__init__(**options)
+        self.tight, self.loose = float(tight), float(loose)
+        self.version = f"mu2e_histcompare.ks/dqm.hist.compare (tight {self.tight:g}, loose {self.loose:g})"
+
     def assess(self, ctx: RunContext) -> List[Finding]:
-        from dqm.hist.compare import CompareStatus, compare_histograms
+        from mu2e_histcompare import ks
 
         out = []
         for item in ctx.items:
-            base = dict(run=ctx.run, subsystem=ctx.subsystem, item=item, method=self.name,
-                        method_version=self.version, reference=ctx.reference_id)
+            fields = _hc.base(self, ctx, item)
             h, ref = ctx.hist(item), ctx.reference_hist(item)
             if h is None or ref is None:
-                why = "histogram missing" if h is None else "no reference"
-                out.append(Finding(flag=UNSURE, evidence={"note": why}, **base))
+                out.append(_hc.unsure(fields, "histogram missing" if h is None else "no reference"))
                 continue
-            c = compare_histograms(h, ref, path=item)
-            flag = {CompareStatus.fail: BAD, CompareStatus.cantCompare: UNSURE}.get(c.status, GOOD)
-            p, d = float(c.kolmogorov), 1.0 - float(c.fraction)
-            out.append(Finding(flag=flag, score=p,
-                               evidence={"status": c.status.name,
-                                         "ks_probability": p,
-                                         # c.fraction = 1 - largest |difference| of the normalised
-                                         # cumulative sums. Reported as the difference itself (small =
-                                         # similar), with a plain reading: agents misread "agreement".
-                                         "max_cdf_difference": round(d, 4),
-                                         "reading": (f"KS p-value {p:.2g}; the normalised cumulative "
-                                                     f"distributions differ by at most {d:.1%} "
-                                                     f"(0% = identical shapes)"),
-                                         "note": c.note}, **base))
+            r = ks.compare(h, ref, item, self.tight, self.loose)
+            p, d = r.evidence["ks_probability"], r.evidence["max_cdf_difference"]
+            # Reported as the difference itself (small = similar), with a plain reading:
+            # agents misread an "agreement" fraction.
+            out.append(_hc.to_finding(r, fields, threshold=self.loose,
+                                      reading=(f"KS p-value {p:.2g} (BAD below {self.loose:g}); the "
+                                               f"normalised cumulative distributions differ by at "
+                                               f"most {d:.1%} (0% = identical shapes)")))
         return out

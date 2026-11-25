@@ -24,7 +24,8 @@ class Subsystem:
     dataset_dir: str
     items: List[str]
     mean: List[str]
-    detectors: List[Any]
+    detectors: List[Any]                 # run by assess_run
+    on_demand: List[Any]                 # `on_demand: true`: only through compare()
     periods: Optional[str] = None
     default_run_type: str = "cosmics"
 
@@ -40,10 +41,14 @@ class Service:
         self.reader = reader if reader is not None else self._reader()
         self.subsystems: Dict[str, Subsystem] = {}
         for name, s in cfg["subsystems"].items():
+            routine, on_demand = [], []
+            for spec in s["detectors"]:
+                spec = dict(spec)
+                (on_demand if spec.pop("on_demand", False) else routine).append(build(spec))
             self.subsystems[name] = Subsystem(
                 name=name, sid=s["sid"], source_version=s["source_version"],
                 dataset_dir=s["dataset_dir"], items=s["items"], mean=s.get("mean", []),
-                detectors=[build(d) for d in s["detectors"]], periods=s.get("periods"),
+                detectors=routine, on_demand=on_demand, periods=s.get("periods"),
                 default_run_type=s.get("default_run_type", "cosmics"))
         self._hists: Dict[str, HistSource] = {}
 
@@ -96,7 +101,7 @@ class Service:
     def compare(self, run: int, item: str, subsystem: str, method: str = "ks") -> List[dict]:
         sub = self.subsystems[subsystem]
         ctx = self.context(run, subsystem, items=[item])
-        dets = [d for d in sub.detectors if d.method_id == method]
+        dets = [d for d in sub.detectors + sub.on_demand if d.method_id == method]
         if not dets:
             raise ValueError(f"method {method!r} not enabled for {subsystem}")
         return [f.to_dict() for f in dets[0].assess(ctx)]
@@ -125,7 +130,9 @@ class Service:
         return out
 
     def list_methods(self, subsystem: str) -> List[dict]:
-        return [d.card.to_dict() for d in self.subsystems[subsystem].detectors]
+        sub = self.subsystems[subsystem]
+        return ([{**d.card.to_dict(), "on_demand": False} for d in sub.detectors]
+                + [{**d.card.to_dict(), "on_demand": True} for d in sub.on_demand])
 
     def get_reference(self, run: int, subsystem: str) -> Optional[dict]:
         ref = self.context(run, subsystem).reference

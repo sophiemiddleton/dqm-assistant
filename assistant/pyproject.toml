@@ -7,18 +7,20 @@ name = "dqm-assistant"
 version = "0.1.0"
 description = "Mu2e DQM run assessor (method-agnostic) behind MCP"
 requires-python = ">=3.10"
-# mu2e-dqm (github.com/Mu2e/DQM, subdirectory python) is not on PyPI: ../install.sh installs it
-# from git in the same resolve, so only the name is given here.
+# mu2e-dqm (github.com/Mu2e/DQM, subdirectory python) and mu2e-histcompare are not on PyPI:
+# ../install.sh installs them from git in the same resolve, so only the names are given here.
 dependencies = [
     "mcp>=2.0.0",
     "mu2e-dqm[hist,evaluate]",   # hist: dqm.hist (KS, uproot); evaluate: dqm.evaluate
+    "mu2e-histcompare",          # the histogram methods: ks, vision, hydra
     "pyyaml",
     "numpy",
     "uproot",
 ]
 
 [project.optional-dependencies]
-llm = ["openai"]        # the L2 report-text pass (llm.py) and the vision detector
+llm = ["openai", "mu2e-histcompare[vision]"]   # the L2 report-text pass (llm.py) and the vision detector
+hydra = ["mu2e-histcompare[hydra]"]             # torch, for the hydra detector
 test = ["pytest"]
 
 [tool.setuptools]

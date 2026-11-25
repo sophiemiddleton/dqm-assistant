@@ -18,7 +18,7 @@ Everything comes from git; no local checkout of other code is needed.
 
 ```bash
 git clone git@github.com:sophiemiddleton/dqm-assistant.git && cd dqm-assistant
-./install.sh --tranad          # venv in .venv; without --tranad: no torch, KS and alarms only
+./install.sh --tranad --hydra  # venv in .venv; without them: no torch (KS, vision and alarms only)
 .venv/bin/python -m pytest -q assistant/tests
 ```
 
@@ -27,12 +27,14 @@ git clone git@github.com:sophiemiddleton/dqm-assistant.git && cd dqm-assistant
 | Package | From | Why |
 |---|---|---|
 | this repo's `assistant/` and `tranad-score/` | editable | the server and the TranAD scorer |
-| `mu2e-dqm[hist,evaluate]` | [Mu2e/DQM](https://github.com/Mu2e/DQM) @ v2.1.3 | DQM database reader, histogram KS, evaluator API |
+| `mu2e-dqm[hist,evaluate]` | [Mu2e/DQM](https://github.com/Mu2e/DQM) @ v2.1.3 | DQM database reader, histogram reading, evaluator API |
+| `mu2e-histcompare[vision]` | [mu2e-histcompare](https://github.com/sophiemiddleton/mu2e-histcompare) @ main | the histogram methods: KS, vision LLM, HYDRA (`--hydra` adds torch) |
 | `mu2e_tranad` | [mu2e-tranad](https://github.com/Mu2e/mu2e-tranad) @ 961d4ab | TranAD evaluation (`--tranad`) |
 | `mcp`, `torch` (CPU), ... | PyPI | |
 
 Each git source is a pinned default that can be overridden with an environment variable
-(`DQM_SPEC`, `MU2E_TRANAD_SPEC`), set to another ref or to a path to a local clone. The
+(`DQM_SPEC`, `MU2E_HISTCOMPARE_SPEC`, `MU2E_TRANAD_SPEC`), set to another ref or to a path
+to a local clone. The
 TranAD model itself is a copy of ANL's anldq implementation kept inside mu2e_tranad, so
 the private ANL repository is not needed. See the header of `install.sh`.
 
@@ -69,8 +71,10 @@ Also needed:
  └──────┬──────────────────────────────┘
         │ Python calls (detector plugins)
  ┌──────▼──────────────────────────────┐
- │ Detectors: ks, tranad (tranad-score)│  "is this run anomalous, by method X?"
- │ dqm_alarms (limits, tranad), vision │
+ │ Detectors: ks, vision, hydra        │  "is this run anomalous, by method X?"
+ │ (mu2e-histcompare), tranad          │
+ │ (tranad-score), dqm_alarms (limits, │
+ │ tranad)                             │
  │ remote (any dqm-method-scores/1)    │
  └──────┬──────────────────────────────┘
         │
@@ -151,7 +155,7 @@ transport:
 
 | How a method's result arrives | Used for | Why |
 |---|---|---|
-| in-process detector | KS | cheap, no extra dependencies |
+| in-process detector | KS, vision, HYDRA (from mu2e-histcompare) | the histogram methods; vision needs the LLM gateway, HYDRA torch and its models |
 | DQM database (`dqm_alarms`) | limits, tranad | already computed by the DQM driver |
 | `remote` detector reading [dqm-method-scores/1](method-scores/SCHEMA.md) by command, HTTP or file | TranAD (tranad-score) | own env (torch), model files, possibly a GPU |
 

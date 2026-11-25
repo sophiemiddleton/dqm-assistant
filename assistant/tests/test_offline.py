@@ -311,3 +311,116 @@ def test_llm_summary_failure_is_not_a_method_failure():
     dets = [Fake("ks", {"A": BAD}), Fake("tranad", {"A": GOOD}, needs_ref=False)]   # method_artefact
     rep, _ = assessor.assess(ctx(), dets, history=[], llm=BadLLM())
     assert rep.verdict == "GOOD" and any("LLM summary failed" in n for n in rep.not_checked)
+
+
+# --- histogram detectors on real mu2e_histcompare code (toy histograms, no model call) ------
+
+class _ToyHists:
+    """HistSource stand-in: run -> {item: hist.Hist}."""
+
+    def __init__(self, by_run):
+        self.by_run = by_run
+
+    def hist(self, run, item):
+        return self.by_run.get(run, {}).get(item)
+
+    def summed(self, runs, item):
+        return self.hist(runs[0], item)
+
+
+def _toy(mu, seed=0, bins=50):
+    hist = pytest.importorskip("hist")
+    import numpy as np
+    h = hist.Hist(hist.axis.Regular(bins, 0, 100))
+    h.fill(np.random.default_rng(seed).normal(mu, 10, 20000))
+    return h
+
+
+def _hist_ctx(run_hists, ref_hists, items, reference=REF):
+    return RunContext(run=200, subsystem="CRV", sid=118, source_version="006-001", items=items,
+                      hists=_ToyHists({200: run_hists, 100: ref_hists}), reference=reference,
+                      run_type="cosmics")
+
+
+def test_ks_detector_uses_mu2e_histcompare_thresholds():
+    pytest.importorskip("mu2e_histcompare")
+    from dqm_assistant.detectors import build
+    c = _hist_ctx({"d/PEr": _toy(50, 1), "d/logchi2": _toy(60), "d/rebinned": _toy(50, 1, bins=25)},
+                  {"d/PEr": _toy(50, 2), "d/logchi2": _toy(50, 2), "d/rebinned": _toy(50, 2)},
+                  ["d/PEr", "d/logchi2", "d/rebinned", "d/missing"])
+    f = {x.item: x for x in build({"type": "ks"}).assess(c)}
+    assert f["d/PEr"].flag == GOOD and f["d/PEr"].threshold == 0.01
+    assert f["d/logchi2"].flag == BAD and f["d/logchi2"].evidence["status"] == "fail"
+    assert "BAD below 0.01" in f["d/logchi2"].evidence["reading"]
+    assert f["d/rebinned"].flag == UNSURE            # cantCompare: no verdict, not BAD
+    assert f["d/missing"].flag == UNSURE and f["d/missing"].evidence["note"] == "histogram missing"
+
+
+def test_vision_detector_bundled_instructions_and_reviewer(monkeypatch):
+    pytest.importorskip("mu2e_histcompare")
+    from mu2e_histcompare import vision as hc_vision
+    from dqm_assistant.detectors import build
+
+    class Stub:
+        def review(self, content):
+            return "Observations: shifted peak.\nVerdict: BAD", "BAD"
+
+    monkeypatch.setattr(hc_vision, "make_reviewer", lambda *a, **k: Stub())
+    monkeypatch.setenv("LITELLM_API_KEY", "test-not-a-key")    # never the real ~/.litellm_key
+    det = build({"type": "vision", "instructions": "crv_real_draft"})
+    c = _hist_ctx({"crvRecoDQM/PEr": _toy(60), "x/notaplot": _toy(50)},
+                  {"crvRecoDQM/PEr": _toy(50, 2), "x/notaplot": _toy(50)}, ["crvRecoDQM/PEr", "x/notaplot"])
+    f = {x.item: x for x in det.assess(c)}
+    assert f["crvRecoDQM/PEr"].flag == BAD and "shifted peak" in f["crvRecoDQM/PEr"].evidence["text"]
+    assert f["x/notaplot"].flag == UNSURE and "instructions" in f["x/notaplot"].evidence["note"]
+
+
+def test_hydra_detector_scores_without_reference(tmp_path):
+    pytest.importorskip("mu2e_histcompare")
+    torch = pytest.importorskip("torch")
+    from hydra_mu2e.model import PlotCNN
+    from dqm_assistant.detectors import build
+
+    torch.save(PlotCNN().state_dict(), tmp_path / "PEr.pt")     # untrained: plumbing only
+    det = build({"type": "hydra", "models": str(tmp_path)})
+    assert det.card.needs_reference is False
+    c = _hist_ctx({"crvRecoDQM/PEr": _toy(50), "crvRecoDQM/logchi2": _toy(50)}, {},
+                  ["crvRecoDQM/PEr", "crvRecoDQM/logchi2"], reference=None)
+    f = {x.item: x for x in det.assess(c)}
+    pe = f["crvRecoDQM/PEr"]
+    assert pe.flag in (GOOD, BAD) and 0.0 <= pe.score <= 1.0 and pe.threshold == 0.5
+    assert pe.reference is None and pe.evidence["model"].endswith("PEr.pt")
+    assert f["crvRecoDQM/logchi2"].flag == UNSURE and "no model" in f["crvRecoDQM/logchi2"].evidence["note"]
+    with pytest.raises(FileNotFoundError):
+        build({"type": "hydra", "models": str(tmp_path / "nope")})
+
+
+def test_on_demand_method_only_runs_through_compare(tmp_path):
+    register("fake_ks2")(type("FakeKS2", (Fake,), {
+        "__init__": lambda self, **kw: Fake.__init__(self, "ks", {"A": GOOD}),
+    }))
+    register("fake_vision")(type("FakeVision", (Fake,), {
+        "__init__": lambda self, **kw: Fake.__init__(self, "vision", {"A": BAD}, false_alarms=()),
+    }))
+    (tmp_path / "refs.yaml").write_text(textwrap.dedent("""
+        - {id: r, version: 2, source_version: "006-001", run_type: cosmics,
+           valid_runs: [1, null], runs: [100], status: approved}
+    """))
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text(textwrap.dedent(f"""
+        store: {tmp_path}/store
+        references: {tmp_path}/refs.yaml
+        llm: false
+        subsystems:
+          CRV: {{sid: 118, source_version: "006-001", dataset_dir: /nonexistent, items: [A],
+                 detectors: [{{type: fake_ks2}}, {{type: fake_vision, on_demand: true}}]}}
+    """))
+    from dqm_assistant.service import Service
+    s = Service(str(cfg), use_llm=False, reader=False)
+
+    rep = s.assess_run(200, "CRV")
+    assert rep["verdict"] == "GOOD"                              # vision's BAD is not in it
+    assert rep["methods_judged"] == ["ks"] and rep["methods_not_judged"] == []
+    assert {f["method"] for f in s.get_findings(200, "CRV")} == {"ks"}
+    assert [f["flag"] for f in s.compare(200, "A", "CRV", method="vision")] == [BAD]
+    assert {(m["name"], m["on_demand"]) for m in s.list_methods("CRV")} == {("ks", False), ("vision", True)}

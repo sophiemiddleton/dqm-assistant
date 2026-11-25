@@ -1,18 +1,20 @@
-"""Vision-LLM review of each histogram against its reference, reusing mu2e-vision.
+"""Vision-LLM review of each histogram against its reference: mu2e_histcompare.vision.
 
-Needs HistCompare/mu2e-vision on PYTHONPATH and LITELLM_API_KEY. One model call per
-histogram, so it is the slow, costly detector: enable it per subsystem in the config.
+The model sees the reference plot, the run's plot and that plot's written instructions
+(mu2e-histcompare bundles mu2e-vision's instructions: give a name such as
+`crv_real_draft`, or a path to a YAML). Needs LITELLM_API_KEY for the LiteLLM gateway.
+One model call per histogram, so it is the slow, costly detector: enable it per
+subsystem in the config.
 """
 
 from __future__ import annotations
 
-from typing import List
-
-import yaml
+from typing import List, Optional
 
 from dqm_assistant.context import RunContext
+from dqm_assistant.detectors import _hc
 from dqm_assistant.detectors.base import Detector, register
-from dqm_assistant.findings import BAD, GOOD, UNSURE, Finding, MethodCard
+from dqm_assistant.findings import Finding, MethodCard
 
 
 @register("vision")
@@ -27,32 +29,40 @@ class VisionDetector(Detector):
         calibrated=False,
     )
 
-    def __init__(self, instructions: str, model: str = "azure/claude-opus-5-5",
-                 base_url: str = "https://litellm.fnal.gov/v1", **options):
+    def __init__(self, instructions: str = "crv_real_draft", model: str = "azure/claude-opus-5-5",
+                 base_url: Optional[str] = "https://litellm.fnal.gov/v1", effort: str = "high",
+                 **options):
         super().__init__(**options)
-        self.plots = yaml.safe_load(open(instructions))["plots"]
-        self.model, self.base_url = model, base_url
-        self.version = model
+        from mu2e_histcompare import instructions as bundled
+
+        self.instructions = str(bundled.path(instructions))
+        self.plots = bundled.load(instructions)
+        self.model, self.base_url, self.effort = model, base_url, effort
+        self.version = f"{model} ({bundled.path(instructions).stem})"
 
     def assess(self, ctx: RunContext) -> List[Finding]:
-        from histcompare.context import render, user_content, xlabel_for
-        from histcompare.vision import OpenAIReviewer
+        from mu2e_histcompare import vision
+        from mu2e_histcompare.result import short_name
 
-        reviewer = OpenAIReviewer(self.base_url, self.model)
+        if self.base_url:
+            # The reviewer reads LITELLM_API_KEY only; give it the same key the rest of
+            # dqm-assistant uses (env, else ~/.litellm_key), so the server needs no extra setup.
+            import os
+            from dqm_assistant.llm import _key
+            key = _key()
+            if not key:
+                raise RuntimeError("vision: no LiteLLM key (LITELLM_API_KEY or ~/.litellm_key)")
+            os.environ.setdefault("LITELLM_API_KEY", key)
+        reviewer = vision.make_reviewer(self.model, self.base_url, self.effort)
         out = []
         for item in ctx.items:
-            name = item.rsplit("/", 1)[-1]
-            base = dict(run=ctx.run, subsystem=ctx.subsystem, item=item, method=self.name,
-                        method_version=self.version, reference=ctx.reference_id)
-            instr, h, ref = self.plots.get(name), ctx.hist(item), ctx.reference_hist(item)
+            fields = _hc.base(self, ctx, item)
+            instr, h, ref = self.plots.get(short_name(item)), ctx.hist(item), ctx.reference_hist(item)
             if instr is None or h is None or ref is None:
-                out.append(Finding(flag=UNSURE, evidence={"note": "no instructions, histogram or reference"}, **base))
+                out.append(_hc.unsure(fields, "no instructions for this plot" if instr is None else
+                                      "histogram missing" if h is None else "no reference"))
                 continue
-            xl = instr.get("xlabel") or xlabel_for(name)
-            content = user_content(name, str(ctx.run), ctx.run_type, ctx.reference_runs[0], instr,
-                                   render(h, instr.get("title", name), xl, f"run {ctx.run}"),
-                                   render(ref, instr.get("title", name), xl, "reference"))
-            text, verdict = reviewer.review(content)
-            flag = {"GOOD": GOOD, "BAD": BAD}.get(verdict or "", UNSURE)
-            out.append(Finding(flag=flag, evidence={"text": text}, **base))
+            r = vision.compare(h, ref, item, instr, reviewer, run=str(ctx.run),
+                               ref_run=str(ctx.reference_runs[0]), run_type=ctx.run_type)
+            out.append(_hc.to_finding(r, fields, text=r.detail))
         return out

@@ -18,6 +18,12 @@ configuration), `ecl` (shift logbook), `kb` (DocDB).
    - `get_findings(run, method=...)` for raw scores and evidence;
    - `history(item, run_min, run_max)` for "since when?";
    - `compare(run, item, method=...)` for one fresh comparison.
+   - On-demand methods (`list_methods` shows `on_demand: true`, e.g. `vision`) are not part of
+     `assess_run`. Use one with `compare` when the user asks what exactly is wrong with a
+     flagged histogram: vision answers in words (which channels, which FEBs) where the routine
+     methods give only a flag and a score. It costs one LLM call per histogram, so call it for
+     the flagged items only, and say that its answer is one more method's view, not a verdict
+     on the run.
 4. Context the report does not have: `ecl` entries in the run's time window; `runs.get_run`
    if the run type looks wrong.
 
